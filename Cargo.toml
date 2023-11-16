@@ -1,0 +1,17 @@
+[package]
+name = "abd"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nalgebra = "0.32"
+argmin = "0.8"
+argmin-math = { version = "0.3", features = ["nalgebra_v0_32"] }
+bevy_ecs = "0.12"
+bevy_asset = "0.12"
+bevy_reflect = "0.12"
+
+[dev-dependencies]
+itertools = "0.12"
