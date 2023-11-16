@@ -6,7 +6,12 @@ use nalgebra::{Point3, RealField};
 ///
 /// Translated from [https://www.geometrictools.com/GTE/Mathematics/DistSegmentSegment.h](https://www.geometrictools.com/GTE/Mathematics/DistSegmentSegment.h).
 #[allow(non_snake_case)]
-pub fn seg_seg_squared_distance<Scalar: RealField + PartialOrd>(a0: Point3<Scalar>, a1: Point3<Scalar>, b0: Point3<Scalar>, b1: Point3<Scalar>) -> Scalar {
+pub fn seg_seg_squared_distance<Scalar: RealField + PartialOrd>(
+    a0: Point3<Scalar>,
+    a1: Point3<Scalar>,
+    b0: Point3<Scalar>,
+    b1: Point3<Scalar>,
+) -> Scalar {
     // The code allows degenerate line segments; that is, P0 and P1
     // can be the same point or Q0 and Q1 can be the same point.  The
     // quadratic function for squared distance between the segment is
@@ -48,10 +53,10 @@ pub fn seg_seg_squared_distance<Scalar: RealField + PartialOrd>(a0: Point3<Scala
 
         let sValue = [
             GetClampedRoot(a.clone(), f00.clone(), f10.clone()),
-            GetClampedRoot(a.clone(), f01.clone(), f11.clone())
+            GetClampedRoot(a.clone(), f01.clone(), f11.clone()),
         ];
 
-        let classify = sValue.clone().map(|value|
+        let classify = sValue.clone().map(|value| {
             if value <= Scalar::zero() {
                 -1i32
             } else if value >= Scalar::one() {
@@ -59,7 +64,7 @@ pub fn seg_seg_squared_distance<Scalar: RealField + PartialOrd>(a0: Point3<Scala
             } else {
                 0i32
             }
-        );
+        });
 
         parameter = if classify[0] == -1 && classify[1] == -1 {
             // The minimum must occur on s = 0 for 0 <= t <= 1.
@@ -105,9 +110,16 @@ pub fn seg_seg_squared_distance<Scalar: RealField + PartialOrd>(a0: Point3<Scala
         }
     }
 
-
-    let a = a0.clone().coords.scale(Scalar::one() - parameter[0].clone()) + a1.coords.scale(parameter[0].clone());
-    let b = b0.clone().coords.scale(Scalar::one() - parameter[1].clone()) + b1.coords.scale(parameter[1].clone());
+    let a = a0
+        .clone()
+        .coords
+        .scale(Scalar::one() - parameter[0].clone())
+        + a1.coords.scale(parameter[0].clone());
+    let b = b0
+        .clone()
+        .coords
+        .scale(Scalar::one() - parameter[1].clone())
+        + b1.coords.scale(parameter[1].clone());
     (a - b).magnitude_squared()
 }
 
@@ -122,8 +134,7 @@ fn ComputeIntersection<Scalar: RealField + PartialOrd>(
     b: Scalar,
     f00: Scalar,
     f10: Scalar,
-) -> ([i32; 2], [[Scalar; 2]; 2])
-{
+) -> ([i32; 2], [[Scalar; 2]; 2]) {
     // The divisions are theoretically numbers in [0,1]. Numerical
     // rounding errors might cause the result to be outside the
     // interval. When this happens, it must be that both numerator
@@ -139,7 +150,10 @@ fn ComputeIntersection<Scalar: RealField + PartialOrd>(
     // applications.
 
     let mut edge = [0; 2];
-    let mut end = [[Scalar::zero(), Scalar::zero()], [Scalar::zero(), Scalar::zero()]];
+    let mut end = [
+        [Scalar::zero(), Scalar::zero()],
+        [Scalar::zero(), Scalar::zero()],
+    ];
 
     if classify[0] < 0 {
         edge[0] = 0;
@@ -186,7 +200,8 @@ fn ComputeIntersection<Scalar: RealField + PartialOrd>(
                 end[1][1] = Scalar::from_f32(0.5).unwrap();
             }
         }
-    } else { // classify[0] > 0
+    } else {
+        // classify[0] > 0
         edge[0] = 1;
         end[0][0] = Scalar::one();
         end[0][1] = f10.clone() / b.clone();
@@ -202,8 +217,7 @@ fn ComputeIntersection<Scalar: RealField + PartialOrd>(
             edge[1] = 0;
             end[1][0] = Scalar::zero();
             end[1][1] = f00.clone() / b.clone();
-            if end[1][1] < Scalar::zero() || end[1][1] > Scalar::one()
-            {
+            if end[1][1] < Scalar::zero() || end[1][1] > Scalar::one() {
                 end[1][1] = Scalar::from_f32(0.5).unwrap();
             }
         }
@@ -217,12 +231,17 @@ fn ComputeIntersection<Scalar: RealField + PartialOrd>(
 fn ComputeMinimumParameters<Scalar: RealField + PartialOrd>(
     edge: [i32; 2],
     end: [[Scalar; 2]; 2],
-    b: Scalar, c: Scalar, e: Scalar,
-    g00: Scalar, g10: Scalar, g01: Scalar, g11: Scalar,
-) -> [Scalar; 2]
-{
+    b: Scalar,
+    c: Scalar,
+    e: Scalar,
+    g00: Scalar,
+    g10: Scalar,
+    g01: Scalar,
+    g11: Scalar,
+) -> [Scalar; 2] {
     let delta = end[1][1].clone() - end[0][1].clone();
-    let h0 = delta.clone() * (-b.clone() * end[0][0].clone() + c.clone() * end[0][1].clone() - e.clone());
+    let h0 = delta.clone()
+        * (-b.clone() * end[0][0].clone() + c.clone() * end[0][1].clone() - e.clone());
     if h0 >= Scalar::zero() {
         if edge[0] == 0 {
             [Scalar::zero(), GetClampedRoot(c, g00, g01)]
@@ -232,7 +251,8 @@ fn ComputeMinimumParameters<Scalar: RealField + PartialOrd>(
             [end[0][0].clone(), end[0][1].clone()]
         }
     } else {
-        let h1 = delta * (-b.clone() * end[1][0].clone() + c.clone() * end[1][1].clone() - e.clone());
+        let h1 =
+            delta * (-b.clone() * end[1][0].clone() + c.clone() * end[1][1].clone() - e.clone());
         if h1 <= Scalar::zero() {
             if edge[1] == 0 {
                 [Scalar::zero(), GetClampedRoot(c, g00, g01)]
@@ -241,11 +261,18 @@ fn ComputeMinimumParameters<Scalar: RealField + PartialOrd>(
             } else {
                 [end[1][0].clone(), end[1][1].clone()]
             }
-        } else  // h0 < 0 and h1 > 0
+        } else
+        // h0 < 0 and h1 > 0
         {
-            let z = Scalar::min(Scalar::max(h0.clone() / (h0 - h1), Scalar::zero()), Scalar::one());
+            let z = Scalar::min(
+                Scalar::max(h0.clone() / (h0 - h1), Scalar::zero()),
+                Scalar::one(),
+            );
             let omz = Scalar::one() - z.clone();
-            [omz.clone() * end[0][0].clone() + z.clone() * end[1][0].clone(), omz.clone() * end[0][1].clone() + z.clone() * end[1][1].clone()]
+            [
+                omz.clone() * end[0][0].clone() + z.clone() * end[1][0].clone(),
+                omz.clone() * end[0][1].clone() + z.clone() * end[1][1].clone(),
+            ]
         }
     }
 }

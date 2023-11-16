@@ -6,7 +6,12 @@ use nalgebra::{Point3, RealField};
 /// (https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf)[https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf].
 ///
 /// Assumes that the triangle is non-degenerate.
-pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(a: Point3<Scalar>, b: Point3<Scalar>, c: Point3<Scalar>, p: Point3<Scalar>) -> Scalar {
+pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(
+    a: Point3<Scalar>,
+    b: Point3<Scalar>,
+    c: Point3<Scalar>,
+    p: Point3<Scalar>,
+) -> Scalar {
     let base = a.clone();
     let edge0 = &b - &a;
     let edge1 = &c - &a;
@@ -17,9 +22,9 @@ pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(a: Point3<Scalar>
     let d = edge0.dot(&dist);
     let e = edge1.dot(&dist);
     let two = Scalar::one() + Scalar::one();
-    let mut s = b.clone() * e.clone() - c.clone() * d.clone() ;
-    let mut t = b.clone() * d.clone() - a.clone() * e.clone() ;
-    let det = a.clone() * c.clone() - b.clone().powi(2) ;
+    let mut s = b.clone() * e.clone() - c.clone() * d.clone();
+    let mut t = b.clone() * d.clone() - a.clone() * e.clone();
+    let det = a.clone() * c.clone() - b.clone().powi(2);
     if s.clone() + t.clone() <= det {
         if s < Scalar::zero() {
             if t.is_negative() {
@@ -74,7 +79,7 @@ pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(a: Point3<Scalar>
             let tmp1 = c.clone() + e.clone();
             if tmp1 > tmp0 {
                 let numerator = tmp1 - tmp0;
-                let denominator = a.clone() - two*b + c;
+                let denominator = a.clone() - two * b + c;
                 if numerator >= denominator {
                     s = Scalar::one();
                     t = Scalar::zero();
@@ -98,7 +103,7 @@ pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(a: Point3<Scalar>
             let tmp1 = a.clone() + d.clone();
             if tmp1 > tmp0 {
                 let numerator = tmp1 - tmp0;
-                let denominator = a - two*b + c;
+                let denominator = a - two * b + c;
                 if numerator >= denominator {
                     t = Scalar::one();
                 } else {
@@ -121,7 +126,7 @@ pub fn tri_pt_squared_distance<Scalar: RealField + PartialOrd>(a: Point3<Scalar>
             if numerator <= Scalar::zero() {
                 s = Scalar::zero();
             } else {
-                let denominator = a - two*b + c;
+                let denominator = a - two * b + c;
                 if numerator >= denominator {
                     s = Scalar::one();
                 } else {
