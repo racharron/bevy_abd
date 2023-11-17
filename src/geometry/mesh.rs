@@ -1,4 +1,4 @@
-use nalgebra::{RealField, Vector3};
+use nalgebra::{Point3, RealField, Vector3};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
@@ -16,7 +16,7 @@ pub struct MeshCache<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> 
 
 /// There are no degenerate triangles in the triangle strip.
 pub struct MeshShape<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> {
-    vertices: [Vec<Scalar>; 3],
+    vertices: Vec<Point3<Scalar>>,
     /// If empty, assume that the there is a single triangle strip consisting of
     /// the vertices in-order.
     indices: Vec<Index>,
@@ -179,9 +179,7 @@ where Scalar: RealField + From<f32>,
     fn try_from(value: &Mesh) -> Result<Self, Self::Error> {
         let vertices = value.attribute(Mesh::ATTRIBUTE_POSITION).ok_or(MeshColliderConversionError::NoPositions)?
             .as_float3().ok_or(MeshColliderConversionError::NoFloatVertices)?;
-        let mut xs = Vec::with_capacity(vertices.len());
-        let mut ys = Vec::with_capacity(vertices.len());
-        let mut zs = Vec::with_capacity(vertices.len());
+        let mut points = Vec::with_capacity(vertices.len());
         let mut is = Vec::with_capacity(vertices.len());
         let mut boundaries = Vec::new();
 
@@ -196,11 +194,9 @@ where Scalar: RealField + From<f32>,
                         if prev == prev_prev {
                             boundaries.push(i);
                         } else {
-                            let [x, y, z] = vertices[index as usize].clone();
+                            let p = Point3::from(vertices[index as usize].clone().map(Scalar::from));
                             let index = Index::try_from(index).map_err(|_| MeshColliderConversionError::U16ToIndex(i))?;
-                            xs.push(x.into());
-                            ys.push(y.into());
-                            zs.push(z.into());
+                            points.push(p);
                             is.push(index);
                         }
                     }
@@ -208,7 +204,7 @@ where Scalar: RealField + From<f32>,
                     prev = Some(index);
                 }
                 Ok(MeshShape {
-                    vertices: [xs, ys, zs],
+                    vertices: points,
                     indices: is,
                     strip_boundaries: boundaries,
                 })
@@ -223,11 +219,9 @@ where Scalar: RealField + From<f32>,
                         if prev == prev_prev {
                             boundaries.push(i);
                         } else {
-                            let [x, y, z] = vertices[index as usize].clone();
+                            let p = Point3::from(vertices[index as usize].clone().map(Scalar::from));
                             let index = Index::try_from(index).map_err(|_| MeshColliderConversionError::U32ToIndex(i))?;
-                            xs.push(x.into());
-                            ys.push(y.into());
-                            zs.push(z.into());
+                            points.push(p.into());
                             is.push(index);
                         }
                     }
@@ -235,7 +229,7 @@ where Scalar: RealField + From<f32>,
                     prev = Some(index);
                 }
                 Ok(MeshShape {
-                    vertices: [xs, ys, zs],
+                    vertices: points,
                     indices: is,
                     strip_boundaries: boundaries,
                 })
@@ -243,23 +237,21 @@ where Scalar: RealField + From<f32>,
             None    => {
                 let mut prev = None;
                 let mut prev_prev = None;
-                for (i, &p @ [x, y, z]) in vertices.iter().enumerate() {
+                for (i, &p) in vertices.iter().enumerate() {
                     if Some(p) == prev_prev {
                         return Err(MeshColliderConversionError::InvalidDegeneracy(i - 2))
                     } else if Some(p) != prev {
                         if prev == prev_prev {
                             boundaries.push(i);
                         } else {
-                            xs.push(x.into());
-                            ys.push(y.into());
-                            zs.push(z.into());
+                            points.push(Point3::from(p.map(Scalar::from)));
                         }
                     }
                     prev_prev = prev;
                     prev = Some(p);
                 }
                 Ok(MeshShape {
-                    vertices: [xs, ys, zs],
+                    vertices: points,
                     indices: is,
                     strip_boundaries: boundaries,
                 })
