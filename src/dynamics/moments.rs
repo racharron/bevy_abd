@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use nalgebra::{Const, Matrix3, Matrix4, OMatrix, RealField};
 
 /// The mass matrix takes the form of
@@ -34,8 +35,23 @@ pub struct Moments<Scalar: RealField> {
     pub zz: Scalar,
 }
 
+/// Stores the coefficients of the compacted inverse mass matrix (before the Kronecker product with I_3).
+#[derive(Clone, Debug)]
+pub struct CompactInvMass<Scalar: RealField> {
+    m11: Scalar,
+    m12: Scalar,
+    m13: Scalar,
+    m14: Scalar,
+    m22: Scalar,
+    m23: Scalar,
+    m24: Scalar,
+    m33: Scalar,
+    m34: Scalar,
+    m44: Scalar,
+}
+
 impl<Scalar: RealField> Moments<Scalar> {
-    pub fn compact_inv_m(self) -> OMatrix<Scalar, Const<4>, Const<4>> {
+    pub fn compact_inv_m(self) -> CompactInvMass<Scalar> {
         let Moments {
             v, x, y, z, xx, xy, xz, yy, yz, zz
         } = self;
@@ -99,14 +115,38 @@ impl<Scalar: RealField> Moments<Scalar> {
         let m22 = x29.clone() * (v.clone() * x0.clone() - v.clone() * x6.clone() + x13.clone() + x15.clone() - two.clone() * x36.clone() * yz.clone());
         let m33 = x29.clone() * (v.clone() * x4.clone() + x11.clone() + x14.clone() * xx.clone() - x19.clone() * xz.clone() * z.clone() - x40.clone() * zz.clone());
         let m44 = x29.clone() * (v.clone() * x2.clone() + x10.clone() * yy.clone() + x12.clone() * xx.clone() - x27.clone() * x31.clone() - x40.clone() * yy.clone());
-        Matrix4::new(
-            m11, x30.clone(), x32.clone(), x35.clone(),
-            x30.clone(), m22, x38.clone(), x39.clone(),
-            x32.clone(), x38.clone(), m33, x41.clone(),
-            x35.clone(), x39.clone(), x41.clone(), m44
-        )
-
+        CompactInvMass {
+            m11,
+            m12: x30.clone(),
+            m13: x32.clone(),
+            m14: x35.clone(),
+            m22,
+            m23: x38.clone(),
+            m24: x39.clone(),
+            m33,
+            m34: x41.clone(),
+            m44
+        }
     }
+    pub fn inv_m(self) -> OMatrix<Scalar, Const<12>, Const<12>> {
+        self.compact_inv_m().inv_m()
+    }
+}
+
+impl<Scalar: RealField> CompactInvMass<Scalar> {
+
+    fn to_matrix(self) -> OMatrix<Scalar, Const<4>, Const<4>> {
+        let CompactInvMass {
+            m11, m12, m13, m14, m22, m23, m24, m33, m34, m44
+        } = self;
+        Matrix4::new(
+            m11, m12.clone(), m13.clone(), m14.clone(),
+            m12, m22, m23.clone(), m24.clone(),
+            m13, m23, m33, m34.clone(),
+            m14, m24, m34, m44
+        )
+    }
+
     pub fn inv_m(self) -> OMatrix<Scalar, Const<12>, Const<12>> {
         /*  The following is equivalent to this: (checked with sympy)
         Matrix4::new(
@@ -116,6 +156,65 @@ impl<Scalar: RealField> Moments<Scalar> {
             z, xz, yz, zz
         ).kronecker(&Matrix3::identity()).inv().unwrap()
         */
-        self.compact_inv_m().kronecker(&Matrix3::identity())
+        self.to_matrix().kronecker(&Matrix3::identity())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn compact_inv_mass_conversions() {
+    //  Arbitrarily chosen values
+    let moments = Moments {
+        v: 1.0f64,
+        x: 11.,
+        y: 3.,
+        z: 23.,
+        xx: 5.,
+        xy: 6.,
+        xz: 7.,
+        yy: 8.,
+        yz: 9.,
+        zz: 10.,
+    };
+    let inverse = moments.clone().compact_inv_m();
+    //  Check to make sure that values are unique for later checking.
+    //  If the test fails here, change the values of `moments` until it doesn't.
+    let CompactInvMass { m11, m12, m13, m14, m22, m23, m24, m33, m34, m44 } = inverse.clone();
+    let compact_elements = [m11, m12, m13, m14, m22, m23, m24, m33, m34, m44];
+    let compact_names = ["m11", "m12", "m13", "m14", "m22", "m23", "m24", "m33", "m34", "m44"];
+    for (element, name) in compact_elements.clone().into_iter().zip(compact_names.clone()) {
+        assert!(element.is_finite(), "{name} = {element}");
+    }
+    for elements in [m11, m12, m13, m14, m22, m23, m24, m33, m34, m44].clone().into_iter()
+        .zip(["m11", "m12", "m13", "m14", "m22", "m23", "m24", "m33", "m34", "m44"].clone())
+        .permutations(2)
+    {
+        let (e1, name1) = elements[0];
+        let (e2, name2) = elements[1];
+        assert_ne!(e1, e2, "Pre-test sanity checking of selected values {name1}, {name2}");
+    }
+    let mat4 = inverse.clone().to_matrix();
+    assert_eq!(mat4, mat4.transpose());
+    assert_eq!(mat4[(0, 0)], inverse.m11);
+    assert_eq!(mat4[(0, 1)], inverse.m12);
+    assert_eq!(mat4[(0, 2)], inverse.m13);
+    assert_eq!(mat4[(0, 3)], inverse.m14);
+    assert_eq!(mat4[(1, 1)], inverse.m22);
+    assert_eq!(mat4[(1, 2)], inverse.m23);
+    assert_eq!(mat4[(1, 3)], inverse.m24);
+    assert_eq!(mat4[(2, 2)], inverse.m33);
+    assert_eq!(mat4[(2, 3)], inverse.m34);
+    assert_eq!(mat4[(3, 3)], inverse.m44);
+    let mat12 = inverse.inv_m();
+    assert_eq!(mat12, moments.inv_m());
+    for (r, row) in mat12.row_iter().enumerate() {
+        for (c, &elm) in row.iter().enumerate() {
+            assert!(elm.is_finite(), "inv_M[({r}, {c})] = {elm}");
+            if r % 3 == c % 3 {
+                assert_eq!(elm, mat4[(r / 3, c / 3)], "inv_M[({r}, {c}]");
+            } else {
+                assert_eq!(elm, 0.0, "inv_M[{}][{}] = {}", r, c, elm);
+            }
+        }
     }
 }
