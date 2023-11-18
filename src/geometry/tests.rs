@@ -1,6 +1,8 @@
+use bevy_render::mesh::Mesh;
 use super::*;
 use itertools::Itertools;
 use nalgebra::{Point3, Rotation3, Vector3};
+use crate::geometry::mesh::MeshShape;
 
 const LENGTHS: [f32; 3] = [0.5, 1.0, 2.0];
 const OFFSETS: [f32; 7] = [0.0, 0.5, 1.0, 2.0, -0.5, -1.0, -2.0];
@@ -19,6 +21,13 @@ fn tmp() {
     )
 }
 */
+
+#[test]
+fn cube_moments() {
+    let cube = MeshShape::<f32, u16>::try_from(&Mesh::from(bevy_render::mesh::shape::Cube { size: 1.0, })).unwrap();
+    assert_eq!(cube.moments().v, 8.0);
+}
+
 #[test]
 fn points() {
     for (a0, b0) in offsets_3d()
@@ -191,7 +200,7 @@ fn parallel() {
     }
 }
 
-fn offsets_3d() -> impl Iterator<Item = [f32; 3]> + Clone {
+fn offsets_3d() -> impl Iterator<Item=[f32; 3]> + Clone {
     OFFSETS
         .into_iter()
         .cartesian_product(OFFSETS)
@@ -291,14 +300,14 @@ fn in_tri_prism() {
     }
 }
 
-fn corners(t1: Point3<f32>, t2: Point3<f32>) -> impl Iterator<Item = [Point3<f32>; 3]> {
+fn corners(t1: Point3<f32>, t2: Point3<f32>) -> impl Iterator<Item=[Point3<f32>; 3]> {
     [[0.0; 3].into(), t1, t2]
         .into_iter()
         .permutations(3)
         .map(|vertices| <[_; 3] as TryFrom<_>>::try_from(vertices).unwrap())
 }
 
-fn extended_points(len: f32) -> impl Iterator<Item = [Point3<f32>; 2]> {
+fn extended_points(len: f32) -> impl Iterator<Item=[Point3<f32>; 2]> {
     [[len, 0.0, 0.0], [0.0, len, 0.0], [0.0, 0.0, len]]
         .into_iter()
         .flat_map(|p| {
@@ -317,15 +326,15 @@ fn extended_points(len: f32) -> impl Iterator<Item = [Point3<f32>; 2]> {
         })
 }
 
-fn parameters() -> impl Iterator<Item = [f32; 4]> {
+fn parameters() -> impl Iterator<Item=[f32; 4]> {
     [
         LENGTHS.iter(),
         OFFSETS.iter(),
         OFFSETS.iter(),
         OFFSETS.iter(),
     ]
-    .into_iter()
-    .map(Iterator::cloned)
-    .multi_cartesian_product()
-    .map(|parameters| <[_; 4] as TryFrom<_>>::try_from(parameters).unwrap())
+        .into_iter()
+        .map(Iterator::cloned)
+        .multi_cartesian_product()
+        .map(|parameters| <[_; 4] as TryFrom<_>>::try_from(parameters).unwrap())
 }
