@@ -1,7 +1,6 @@
 use nalgebra::{Point3, RealField, Vector3};
 use std::error::Error;
 use std::marker::PhantomData;
-use argmin_math::ArgminDot;
 use bevy_asset::{Asset, AssetLoader, AssetPath, BoxedFuture, LoadContext};
 use bevy_asset::io::Reader;
 use bevy_reflect::TypePath;

@@ -8,16 +8,7 @@ mod tests;
 
 pub mod mesh;
 
-use std::collections::HashSet;
-use bevy_asset::{AssetEvent, Assets, Handle};
-use bevy_ecs::change_detection::Res;
-use bevy_ecs::event::{EventReader, EventWriter};
-use bevy_ecs::query::{Added, Changed, Or};
-use bevy_ecs::system::{Query, ResMut};
-use bevy_render::mesh::Mesh;
 use nalgebra::RealField;
-use crate::dynamics::ColliderGeometry;
-use crate::geometry::mesh::MeshShape;
 
 
 pub use seg_seg::seg_seg_squared_distance;
