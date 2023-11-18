@@ -13,12 +13,10 @@ mod dynamics;
 pub use dynamics::*;
 
 pub struct PhysicsPlugin<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> {
-    _phantom: PhantomData<fn() -> (Scalar, Index)>
+    _phantom: PhantomData<fn() -> (Scalar, Index)>,
 }
 
 impl<Scalar: RealField + PartialOrd, Index: Copy + Into<usize> + Send + Sync + 'static> Plugin for PhysicsPlugin<Scalar, Index> {
     fn build(&self, app: &mut App) {
-        app
-            ;
     }
 }

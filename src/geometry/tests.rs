@@ -24,7 +24,7 @@ fn tmp() {
 
 #[test]
 fn cube_moments() {
-    let cube = MeshShape::<f32, u16>::try_from(&Mesh::from(bevy_render::mesh::shape::Cube { size: 1.0, })).unwrap();
+    let cube = MeshShape::<f32, u16>::try_from(&Mesh::from(bevy_render::mesh::shape::Cube { size: 1.0 })).unwrap();
     assert_eq!(cube.moments().v, 8.0);
 }
 

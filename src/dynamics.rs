@@ -36,7 +36,6 @@ impl<Scalar: RealField> AffineTransform<Scalar> {
     pub fn translation(&self) -> VectorView3<Scalar> {
         self.translation.as_view()
     }
-
 }
 
 #[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]

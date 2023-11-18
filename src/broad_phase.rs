@@ -8,7 +8,7 @@ use crate::dynamics::AffineBody;
 
 pub struct Islands {
     quantity: usize,
-    map: HashMap<Entity, usize>
+    map: HashMap<Entity, usize>,
 }
 
 pub fn quadratic<Scalar: RealField + TypePath>(
