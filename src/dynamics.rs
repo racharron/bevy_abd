@@ -1,5 +1,7 @@
 use bevy_ecs::component::Component;
 use nalgebra::{Matrix3, Matrix4, MatrixView3, RealField, Vector3, VectorView3};
+use bevy_asset::Handle;
+use bevy_render::mesh::Mesh;
 
 #[cfg(test)]
 mod tests;
@@ -9,6 +11,7 @@ mod moments;
 pub use implicit_euler::State;
 
 pub(crate) use moments::Moments;
+use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct AffineTransform<Scalar: RealField> {
@@ -34,4 +37,19 @@ impl<Scalar: RealField> AffineTransform<Scalar> {
         self.translation.as_view()
     }
 
+}
+
+#[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ColliderGeometryTransform<Scalar: RealField>(pub AffineTransform<Scalar>);
+
+#[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ColliderGeometry<Scalar: RealField> {
+    pub(crate) geometry: Handle<Mesh>,
+    _phantom: PhantomData<Scalar>,
+}
+
+#[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ColliderInternal<Scalar: RealField> {
+    /// The displacement of the furthest point after the collider geometry transform (if there is one) is applied.
+    pub base_radius: Scalar,
 }

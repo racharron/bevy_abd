@@ -6,12 +6,10 @@ use bevy_app::{App, Plugin};
 use nalgebra::RealField;
 
 mod geometry;
-mod collision;
 mod broad_phase;
 mod dynamics;
 
 
-pub use collision::*;
 pub use dynamics::*;
 
 pub struct PhysicsPlugin<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> {

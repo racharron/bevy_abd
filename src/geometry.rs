@@ -16,7 +16,7 @@ use bevy_ecs::query::{Added, Changed, Or};
 use bevy_ecs::system::{Query, ResMut};
 use bevy_render::mesh::Mesh;
 use nalgebra::RealField;
-use crate::ColliderGeometry;
+use crate::dynamics::ColliderGeometry;
 use crate::geometry::mesh::MeshShape;
 
 

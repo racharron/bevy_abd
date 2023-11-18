@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use bevy_ecs::prelude::*;
 use bevy_reflect::TypePath;
 use nalgebra::RealField;
-use crate::ColliderInternal;
+use crate::dynamics::ColliderInternal;
 use crate::dynamics::AffineBody;
 
 
