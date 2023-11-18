@@ -67,7 +67,7 @@ pub enum MeshShapeConversionError {
 
 #[derive(Debug, Error)]
 pub enum MeshShapeLoadingError<LE: Error> {
-    #[error("Could not convert mesh from file `{path}`: {0}")]
+    #[error("Could not convert mesh from file `{path}`: {conversion_error}")]
     Conversion {
         path: AssetPath<'static>,
         #[source]
