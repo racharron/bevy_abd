@@ -19,6 +19,6 @@ pub struct PhysicsPlugin<Scalar: RealField + PartialOrd, Index: Copy + Into<usiz
 impl<Scalar: RealField + PartialOrd, Index: Copy + Into<usize> + Send + Sync + 'static> Plugin for PhysicsPlugin<Scalar, Index> {
     fn build(&self, app: &mut App) {
         app
-            .insert_resource(geometry::MeshCache::<Scalar, Index>::new());
+            ;
     }
 }

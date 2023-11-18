@@ -22,19 +22,19 @@ use crate::geometry::mesh::MeshShape;
 
 pub use seg_seg::seg_seg_squared_distance;
 pub use tri_point::tri_pt_squared_distance;
-pub use mesh::{MeshCache, MeshColliderConversionError};
+pub use mesh::MeshShapeConversionError;
 
 /// The distance squared queries are guaranteed to be within this of the actual value.
 /// This is fairly conservative, so adding a factor of 10 should be good enough for things
 /// like the contact potential.
 pub const TOLERANCE: f32 = 1e-5;
-
+/*
 pub fn update_meshes<Scalar, Index>(
     meshes: Res<Assets<Mesh>>,
     mut mesh_changes: EventReader<AssetEvent<Mesh>>,
     mut cache: ResMut<MeshCache<Scalar, Index>>,
     changed: Query<&ColliderGeometry<Scalar>, Or<(Changed<ColliderGeometry<Scalar>>, Added<ColliderGeometry<Scalar>>)>>,
-    mut errors: EventWriter<MeshColliderConversionError>,
+    mut errors: EventWriter<MeshShapeConversionError>,
 )
     where Scalar: RealField + From<f32>,
           Index: Copy + Into<usize> + TryFrom<u16> + TryFrom<u32> + Send + Sync + 'static
@@ -67,7 +67,7 @@ pub fn update_meshes<Scalar, Index>(
 
 fn update_mesh<Scalar, Index>(
     cache: &mut ResMut<MeshCache<Scalar, Index>>,
-    errors: &mut EventWriter<MeshColliderConversionError>,
+    errors: &mut EventWriter<MeshShapeConversionError>,
     handle: Handle<Mesh>,
     mesh: &Mesh,
 )
@@ -82,3 +82,4 @@ fn update_mesh<Scalar, Index>(
         }
     }
 }
+*/
