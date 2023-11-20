@@ -16,6 +16,7 @@ bevy_render = "0.12"
 bevy_app = "0.12"
 petgraph = "0.6"
 thiserror = "1"
+either = "1"
 
 [dev-dependencies]
 itertools = "0.12"

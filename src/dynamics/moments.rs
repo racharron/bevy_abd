@@ -20,7 +20,7 @@ use nalgebra::{Const, Matrix3, Matrix4, OMatrix, RealField};
 /// So we only need to know the volume integrals of 1 (the volume)
 /// 1, x, y, z, xx, yy, zz, xy, xz, yz
 /// This is not scaled, and needs to be scaled by the (uniform) density of the object.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Moments<Scalar: RealField> {
     pub v: Scalar,
     pub x: Scalar,
@@ -50,10 +50,20 @@ pub struct CompactInvMass<Scalar: RealField> {
 }
 
 impl<Scalar: RealField> Moments<Scalar> {
-    pub fn compact_inv_m(self) -> CompactInvMass<Scalar> {
+    pub(crate) fn compact_inv_m(self, density: Scalar) -> CompactInvMass<Scalar> {
         let Moments {
             v, x, y, z, xx, xy, xz, yy, yz, zz
         } = self;
+        let v = v * density.clone();
+        let x = x * density.clone();
+        let y = y * density.clone();
+        let z = z * density.clone();
+        let xx = xx * density.clone();
+        let yy = yy * density.clone();
+        let zz = zz * density.clone();
+        let xy = xy * density.clone();
+        let xz = xz * density.clone();
+        let yz = yz * density.clone();
         //  This was derived with sympy
         let two = Scalar::from_u32(2).unwrap();
         let x0 = yz.clone().powi(2);
@@ -127,8 +137,8 @@ impl<Scalar: RealField> Moments<Scalar> {
             m44,
         }
     }
-    pub fn inv_m(self) -> OMatrix<Scalar, Const<12>, Const<12>> {
-        self.compact_inv_m().inv_m()
+    pub fn inv_m(self, density: Scalar) -> OMatrix<Scalar, Const<12>, Const<12>> {
+        self.compact_inv_m(density).inv_m()
     }
 }
 

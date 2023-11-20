@@ -8,8 +8,6 @@ mod tests;
 
 pub mod mesh;
 
-use nalgebra::RealField;
-
 
 pub use seg_seg::seg_seg_squared_distance;
 pub use tri_point::tri_pt_squared_distance;

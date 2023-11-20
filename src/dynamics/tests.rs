@@ -23,7 +23,7 @@ fn compact_inv_mass_conversions() {
         yz: 9.,
         zz: 10.,
     };
-    let inverse = moments.clone().compact_inv_m();
+    let inverse = moments.clone().compact_inv_m(1.0);
     //  Check to make sure that values are unique for later checking.
     //  If the test fails here, change the values of `moments` until it doesn't.
     let CompactInvMass { m11, m12, m13, m14, m22, m23, m24, m33, m34, m44 } = inverse.clone();
@@ -53,7 +53,7 @@ fn compact_inv_mass_conversions() {
     assert_eq!(mat4[(2, 3)], inverse.m34);
     assert_eq!(mat4[(3, 3)], inverse.m44);
     let mat12 = inverse.inv_m();
-    assert_eq!(mat12, moments.inv_m());
+    assert_eq!(mat12, moments.inv_m(1.0));
     for (r, row) in mat12.row_iter().enumerate() {
         for (c, &elm) in row.iter().enumerate() {
             assert!(elm.is_finite(), "inv_M[({r}, {c})] = {elm}");
