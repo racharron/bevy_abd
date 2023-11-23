@@ -2,7 +2,7 @@ use bevy_render::mesh::{Indices, Mesh, PrimitiveTopology};
 use super::*;
 use itertools::Itertools;
 use nalgebra::{Point3, Rotation3, Vector3};
-use crate::geometry::mesh::{MeshShape, TriangleStrips};
+use crate::geometry::mesh::MeshShape;
 
 const LENGTHS: [f32; 3] = [0.5, 1.0, 2.0];
 const OFFSETS: [f32; 7] = [0.0, 0.5, 1.0, 2.0, -0.5, -1.0, -2.0];
@@ -31,14 +31,14 @@ fn cuboid_vertices(x_length: f32, y_length: f32, z_length: f32) -> [[f32; 3]; 8]
     let y = y_length / 2.0;
     let z = z_length / 2.0;
     [
-        [-x, -y,  z],
-        [x, -y,  z],
-        [-x,  y,  z],
-        [x,  y,  z],
+        [-x, -y, z],
+        [x, -y, z],
+        [-x, y, z],
+        [x, y, z],
         [-x, -y, -z],
         [x, -y, -z],
-        [-x,  y, -z],
-        [x,  y, -z],
+        [-x, y, -z],
+        [x, y, -z],
     ]
 }
 
@@ -66,15 +66,18 @@ fn simple_cuboid_moments() {
         assert_eq!(cube.moments().x, 0.0, "({x_length}, {y_length}, {z_length})");
         assert_eq!(cube.moments().y, 0.0, "({x_length}, {y_length}, {z_length})");
         assert_eq!(cube.moments().z, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().xx, (y_length.powi(2) + z_length.powi(2)) / 12.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().yy, (x_length.powi(2) + z_length.powi(2)) / 12.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().zz, (x_length.powi(2) + y_length.powi(2)) / 12.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().xy, 0.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().yz, 0.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().xz, 0.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().xx, x_length.powi(3) * y_length * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().yy, x_length * y_length.powi(3) * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
+        assert_eq!(cube.moments().zz, x_length * y_length * z_length.powi(3) / 12.0, "({x_length}, {y_length}, {z_length})");
     }
 }
 
 #[test]
 fn tri_moments() {
-    const LENGTHS: [f32; 4] = [0.5, 1.0, 1.5, 2.0];
+    const LENGTHS: [f32; 8] = [0.5, 1.0, 1.5, 2.0, -0.5, -1.0, -1.5, -2.0];
     for ((xlen, ylen), zlen) in LENGTHS.into_iter().cartesian_product(LENGTHS).cartesian_product(LENGTHS) {
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleStrip);
         let mut vertices = vec![[xlen, 0.0, 0.0], [0.0, ylen, 0.0], [0.0, 0.0, zlen]];
@@ -84,9 +87,9 @@ fn tri_moments() {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
         let neg_tri = MeshShape::<f32, u16>::try_from(&mesh).unwrap();
         assert_eq!(tri.moments().v, -neg_tri.moments().v);
-        assert_eq!(tri.moments().v, xlen*ylen*zlen / 6.0);
+        assert_eq!(tri.moments().v, xlen * ylen * zlen / 6.0);
         fn m100(xlen: f32, ylen: f32, zlen: f32) -> f32 {
-            xlen.powi(2)*ylen*zlen / 24.0
+            xlen.powi(2) * ylen * zlen / 24.0
         }
         assert_eq!(tri.moments().x, -neg_tri.moments().x);
         assert_eq!(tri.moments().x, m100(xlen, ylen, zlen));
@@ -95,23 +98,23 @@ fn tri_moments() {
         assert_eq!(tri.moments().z, -neg_tri.moments().z);
         assert_eq!(tri.moments().z, m100(zlen, ylen, xlen));
         fn m110(xlen: f32, ylen: f32, zlen: f32) -> f32 {
-            xlen.powi(2)*ylen.powi(2)*zlen / 120.0
+            xlen.powi(2) * ylen.powi(2) * zlen / 120.0
         }
         assert_eq!(tri.moments().xy, -neg_tri.moments().xy);
-        assert_eq!(tri.moments().xy, m110(xlen, ylen, zlen));
+        assert!((1.0 - tri.moments().xy / m110(xlen, ylen, zlen)).abs() < 1e-6, "{} != {}", tri.moments().xy, m110(xlen, ylen, zlen));
         assert_eq!(tri.moments().xz, -neg_tri.moments().xz);
-        assert_eq!(tri.moments().xz, m110(xlen, zlen, ylen));
+        assert!((1.0 - tri.moments().xz / m110(xlen, zlen, ylen)).abs() < 1e-6, "{} != {}", tri.moments().xz, m110(xlen, zlen, ylen));
         assert_eq!(tri.moments().yz, -neg_tri.moments().yz);
-        assert_eq!(tri.moments().yz, m110(ylen, zlen, xlen));
+        assert!((1.0 - tri.moments().yz / m110(ylen, zlen, xlen)).abs() < 1e-6, "{} != {}", tri.moments().yz, m110(ylen, zlen, xlen));
         fn m200(xlen: f32, ylen: f32, zlen: f32) -> f32 {
-            xlen.powi(3)*ylen*zlen / 60.0
+            xlen.powi(3) * ylen * zlen / 60.0
         }
         assert_eq!(tri.moments().xx, -neg_tri.moments().xx);
-        assert_eq!(tri.moments().xx, m200(xlen, ylen, zlen));
+        assert!((1.0 - tri.moments().xx / m200(xlen, ylen, zlen)).abs() < 1e-6, "{} != {}", tri.moments().xx, m200(xlen, ylen, zlen));
         assert_eq!(tri.moments().yy, -neg_tri.moments().yy);
-        assert_eq!(tri.moments().yy, m200(ylen, xlen, zlen));
+        assert!((1.0 - tri.moments().yy / m200(ylen, xlen, zlen)).abs() < 1e-6, "{} != {}", tri.moments().yy, m200(ylen, xlen, zlen));
         assert_eq!(tri.moments().zz, -neg_tri.moments().zz);
-        assert_eq!(tri.moments().zz, m200(zlen, ylen, xlen));
+        assert!((1.0 - tri.moments().zz / m200(zlen, ylen, xlen)).abs() < 1e-6, "{} != {}", tri.moments().zz, m200(zlen, ylen, xlen));
     }
 }
 
@@ -343,7 +346,8 @@ fn off_corners() {
                 ] {
                     for offset in OFFSETS {
                         let p = p_proj + offset * t1.coords.cross(&t2.coords).normalize();
-                        let [a, b, c, p] = [a, b, c, p].map(|p| p + Vector3::new(x, y, z));
+                        let [a, b, c, p] =
+                            [a, b, c, p].map(|p| p + Vector3::new(x, y, z));
                         assert_eq!(
                             len * len + offset * offset,
                             tri_pt_squared_distance(a, b, c, p),
@@ -403,7 +407,8 @@ fn in_tri_prism() {
                 ]) {
                     for offset in OFFSETS {
                         let p = p_proj + offset * t1.coords.cross(&t2.coords).normalize();
-                        let [a, b, c, p] = [a, b, c, p].map(|p| p + Vector3::new(x, y, z));
+                        let [a, b, c, p] =
+                            [a, b, c, p].map(|p| p + Vector3::new(x, y, z));
                         assert_eq!(
                             offset * offset,
                             tri_pt_squared_distance(a, b, c, p),

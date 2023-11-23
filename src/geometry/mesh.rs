@@ -67,56 +67,36 @@ impl<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> TriangleStrips<S
     /// Unscaled means that the density of the object is assumed to be 1, and thus this will
     /// need to be scaled by the actual density of the object.
 
-    pub fn moments(&self) -> Moments<Scalar> {
+    pub fn moments(&self) -> Moments<Scalar> {/*
         let m0 =
-            self.accumulate_tet_property(|a, b, c| a.dot(&b.cross(&c)))
-                / Scalar::from_u32(6).unwrap();
+            self.accumulate_surfaces(|a, b, c| Self::signed_tri_volume(a, &b, &c));
         let four = Scalar::from_u32(4).unwrap();
-        let two = Scalar::from_u32(2).unwrap();
-        let ten = Scalar::from_u32(10).unwrap();
         let twenty = Scalar::from_u32(20).unwrap();
         let mx =
-            self.accumulate_tet_property(
+            self.accumulate_surfaces(
                 |a, b, c| a.x.clone() + b.x.clone() + c.x.clone(),
             ) * m0.clone() / four.clone();
         let my =
-            self.accumulate_tet_property(
+            self.accumulate_surfaces(
                 |a, b, c| a.y.clone() + b.y.clone() + c.y.clone(),
             ) * m0.clone() / four.clone();
         let mz =
-            self.accumulate_tet_property(
+            self.accumulate_surfaces(
                 |a, b, c| a.z.clone() + b.z.clone() + c.z.clone(),
-            ) * m0.clone() / four;
-        let mxy =
-            self.accumulate_tet_property(
-                |a, b, c| a.x.clone() * (two.clone() * a.y.clone() + b.y.clone() + c.y.clone())
-                    + b.x.clone() * (a.y.clone() + two.clone() * b.y.clone() + c.y.clone())
-                    + c.x.clone() * (a.y.clone() + b.y.clone() + two.clone() * c.y.clone()),
-            ) * m0.clone() / twenty.clone();
-        let mxz =
-            self.accumulate_tet_property(
-                |a, b, c| a.x.clone() * (two.clone() * a.z.clone() + b.z.clone() + c.z.clone())
-                    + b.x.clone() * (a.z.clone() + two.clone() * b.z.clone() + c.z.clone())
-                    + c.x.clone() * (a.z.clone() + b.z.clone() + two.clone() * c.z.clone()),
-            ) * m0.clone() / twenty.clone();
-        let myz =
-            self.accumulate_tet_property(
-                |a, b, c| a.z.clone() * (two.clone() * a.y.clone() + b.y.clone() + c.y.clone())
-                    + b.z.clone() * (a.y.clone() + two.clone() * b.y.clone() + c.y.clone())
-                    + c.z.clone() * (a.y.clone() + b.y.clone() + two.clone() * c.y.clone()),
-            ) * m0.clone() / twenty;
-        let mx2 = self.accumulate_tet_property(
-            |a, b, c| a.x.clone().powi(2) + b.x.clone().powi(2) + c.x.clone().powi(2)
-                + a.x.clone() * b.x.clone() + a.x.clone() * c.x.clone() + b.x.clone() * c.x.clone(),
-        ) * m0.clone() / ten.clone();
-        let my2 = self.accumulate_tet_property(
-            |a, b, c| a.y.clone().powi(2) + b.y.clone().powi(2) + c.y.clone().powi(2)
-                + a.y.clone() * b.y.clone() + a.y.clone() * c.y.clone() + b.y.clone() * c.y.clone(),
-        ) * m0.clone() / ten.clone();
-        let mz2 = self.accumulate_tet_property(
-            |a, b, c| a.z.clone().powi(2) + b.z.clone().powi(2) + c.z.clone().powi(2)
-                + a.z.clone() * b.z.clone() + a.z.clone() * c.z.clone() + b.z.clone() * c.z.clone(),
-        ) * m0.clone() / ten.clone();
+            ) * m0.clone() / four;*/
+        let volumes = self.oriented_triangles()
+            .map(|[a, b, c]| signed_tri_volume(a.coords, b.coords, c.coords))
+            .collect::<Vec<_>>();
+        let m0 = ikb_comp_sum(volumes);
+        let mx = self.accumulate_centroid(|p| p.x.clone());
+        let my = self.accumulate_centroid(|p| p.y.clone());
+        let mz = self.accumulate_centroid(|p| p.z.clone());
+        let mxy = self.accumulate_quadratic(|p| p.x.clone() * p.y.clone());
+        let mxz = self.accumulate_quadratic(|p| p.x.clone() * p.z.clone());
+        let myz = self.accumulate_quadratic(|p| p.y.clone() * p.z.clone());
+        let mx2 = self.accumulate_quadratic(|p| p.x.clone().powi(2));
+        let my2 = self.accumulate_quadratic(|p| p.y.clone().powi(2));
+        let mz2 = self.accumulate_quadratic(|p| p.z.clone().powi(2));
         Moments {
             v: m0,
             x: mx,
@@ -190,31 +170,72 @@ impl<Scalar: RealField + PartialOrd, Index: Copy + Into<usize>> TriangleStrips<S
         }
     }
 
-    fn accumulate_tet_property(
+    fn accumulate_surfaces(
         &self,
         f: impl Clone + Fn(Vector3<Scalar>, Vector3<Scalar>, Vector3<Scalar>) -> Scalar,
     ) -> Scalar {
-        let tri_count = if let Some(indices) = &self.indices {
+        let mut terms = Vec::with_capacity(self.tri_count());
+        terms.extend(self.oriented_triangles().map(|[a, b, c]| f(a.coords.clone(), b.coords.clone(), c.coords.clone())));
+        ikb_comp_sum(terms)
+    }
+
+    fn accumulate_centroid(&self, f: fn(Vector3<Scalar>) -> Scalar) -> Scalar {
+        let mut terms = Vec::with_capacity(4 * self.tri_count());
+        for [a, b, c] in self.oriented_triangles() {
+            let scale = signed_tri_volume(a.coords.clone(), b.coords.clone(), c.coords.clone()) / Scalar::from_u8(4).unwrap();
+            terms.extend([
+                scale.clone() * f(a.coords.clone_owned()),
+                scale.clone() * f(b.coords.clone_owned()),
+                scale.clone() * f(c.coords.clone_owned()),
+            ]);
+        }
+        ikb_comp_sum(terms)
+    }
+
+    fn accumulate_quadratic(
+        &self,
+        f: fn(Vector3<Scalar>) -> Scalar,
+    ) -> Scalar {
+        let mut terms = Vec::with_capacity(4 * self.tri_count());
+        for [a, b, c] in self.oriented_triangles() {
+            let scale = signed_tri_volume(a.coords.clone(), b.coords.clone(), c.coords.clone()) / Scalar::from_u8(20).unwrap();
+            terms.extend([
+                scale.clone() * f(a.coords.clone_owned()),
+                scale.clone() * f(b.coords.clone_owned()),
+                scale.clone() * f(c.coords.clone_owned()),
+                scale * f(a.coords + b.coords + c.coords)
+            ]);
+        }
+        ikb_comp_sum(terms)
+    }
+
+    fn tri_count(&self) -> usize {
+        if let Some(indices) = &self.indices {
             indices.len() - 2 * (1 + self.strips.len())
         } else {
             self.vertices.len() - 2
-        };
-        let mut terms = Vec::with_capacity(tri_count);
-        terms.extend(self.oriented_triangles().map(|[a, b, c]| f(a.coords.clone(), b.coords.clone(), c.coords.clone())));
-        //  Improved Kahan–Babuška compensated summation algorithm
-        let mut sum = Scalar::zero();
-        let mut c = Scalar::zero();
-        for term in terms {
-            let t = sum.clone() + term.clone();
-            if sum.clone().abs() >= term.clone().abs() {
-                c += (sum.clone() - t.clone()) + term;
-            } else {
-                c += (term - t.clone()) + sum.clone();
-            }
-            sum = t;
         }
-        sum + c
     }
+}
+
+fn signed_tri_volume<Scalar: RealField>(a: Vector3<Scalar>, b: Vector3<Scalar>, c: Vector3<Scalar>) -> Scalar {
+    a.dot(&b.cross(&c)) / Scalar::from_u8(6).unwrap()
+}
+
+fn ikb_comp_sum<Scalar: RealField>(terms: impl IntoIterator<Item=Scalar>) -> Scalar {
+//  Improved Kahan–Babuška compensated summation algorithm
+    let mut sum = Scalar::zero();
+    let mut c = Scalar::zero();
+    for term in terms {
+        let t = sum.clone() + term.clone();
+        if sum.clone().abs() >= term.clone().abs() {
+            c += (sum.clone() - t.clone()) + term;
+        } else {
+            c += (term - t.clone()) + sum.clone();
+        }
+        sum = t;
+    }
+    sum + c
 }
 
 impl<Scalar, Index> Asset for MeshShape<Scalar, Index>
