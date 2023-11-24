@@ -11,7 +11,6 @@ pub mod mesh;
 
 pub use seg_seg::seg_seg_squared_distance;
 pub use tri_point::tri_pt_squared_distance;
-pub use mesh::MeshShapeConversionError;
 
 /// The distance squared queries are guaranteed to be within this of the actual value.
 /// This is fairly conservative, so adding a factor of 10 should be good enough for things

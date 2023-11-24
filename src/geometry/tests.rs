@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet};
 use bevy_render::mesh::{Indices, Mesh, PrimitiveTopology};
 use super::*;
 use itertools::Itertools;
@@ -58,20 +60,106 @@ fn cube_moments() {
 fn simple_cuboid_moments() {
     const LENGTHS: [f32; 4] = [0.5, 1.0, 1.5, 2.0];
     for ((x_length, y_length), z_length) in LENGTHS.into_iter().cartesian_product(LENGTHS).cartesian_product(LENGTHS) {
-        let mesh = Mesh::new(PrimitiveTopology::TriangleStrip)
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, Vec::from(cuboid_vertices(x_length, y_length, z_length)))
-            .with_indices(Some(Indices::U16(Vec::from(CUBE_INDICES))));
-        let cube = MeshShape::<f32, u16>::try_from(&mesh).unwrap();
-        assert_eq!(cube.moments().v, x_length * y_length * z_length);
-        assert_eq!(cube.moments().x, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().y, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().z, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().xy, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().yz, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().xz, 0.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().xx, x_length.powi(3) * y_length * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().yy, x_length * y_length.powi(3) * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
-        assert_eq!(cube.moments().zz, x_length * y_length * z_length.powi(3) / 12.0, "({x_length}, {y_length}, {z_length})");
+        for cube in [
+            MeshShape::<f32, u16>::try_from(&Mesh::from(bevy_render::mesh::shape::Box::new(x_length, y_length, z_length))).unwrap(),
+            MeshShape::<f32, u16>::try_from(&Mesh::new(PrimitiveTopology::TriangleStrip)
+                .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, Vec::from(cuboid_vertices(x_length, y_length, z_length)))
+                .with_indices(Some(Indices::U16(Vec::from(CUBE_INDICES))))).unwrap(),
+            MeshShape::from_indexed_triangle_strip(cuboid_vertices(x_length, y_length, z_length), CUBE_INDICES).unwrap(),
+        ] {
+            println!("{:#?}", cube.triangle_strips);
+            println!();
+            assert_eq!(cube.moments().v, x_length * y_length * z_length);
+            assert_eq!(cube.moments().x, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().y, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().z, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().xy, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().yz, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().xz, 0.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().xx, x_length.powi(3) * y_length * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().yy, x_length * y_length.powi(3) * z_length / 12.0, "({x_length}, {y_length}, {z_length})");
+            assert_eq!(cube.moments().zz, x_length * y_length * z_length.powi(3) / 12.0, "({x_length}, {y_length}, {z_length})");
+        }
+    }
+}
+
+#[test]
+fn bevy_cube_normals() {
+    #[derive(Debug, PartialOrd, PartialEq)]
+    struct OrdWrapper([f32; 3]);
+    impl Eq for OrdWrapper {}
+    impl Ord for OrdWrapper {
+        fn cmp(&self, other: &Self) -> Ordering {
+            let [ax, ay, az] = self.0;
+            let [bx, by, bz] = other.0;
+            match ax.partial_cmp(&bx) {
+                None | Some(Ordering::Equal) => match ay.partial_cmp(&by) {
+                    None | Some(Ordering::Equal) => az.partial_cmp(&bz).unwrap_or(Ordering::Equal),
+                    Some(uneq)  =>  uneq
+                }
+                Some(uneq)    =>  uneq
+            }
+        }
+    }
+    fn aa(tri: &BTreeSet<OrdWrapper>) -> Option<bool> {
+        let mut points = tri.iter().map(|OrdWrapper(v)| Vector3::from(*v));
+        let a = points.next().unwrap();
+        let b = points.next().unwrap();
+        let c = points.next()?;
+        // let dir = (b - a).cross(&(c - a));
+        // Some((dir.x == 0.0 && dir.y == 0.0) || (dir.x == 0.0 && dir.z == 0.0) || (dir.y == 0.0 && dir.z == 0.0))
+        Some((a.x == b.x && b.x == c.x) || (a.y == b.y && b.y == c.y) || (a.z == b.z && b.z == c.z))
+    }
+    let mesh = Mesh::from(bevy_render::mesh::shape::Cube::new(0.75));
+    let cube = MeshShape::<f32, u16>::try_from(&mesh).unwrap();
+    let mut map = BTreeMap::new();
+    for [a, b, c] in cube.oriented_triangles() {
+        let mut tri = BTreeSet::new();
+        tri.insert(OrdWrapper(a.into()));
+        tri.insert(OrdWrapper(b.into()));
+        tri.insert(OrdWrapper(c.into()));
+        *map.entry(tri).or_insert(0) += 1;
+    }
+    for (i, (tri, count)) in map.iter().enumerate() {
+        println!("({i}: {:?}) {:?}: {count}", aa(tri), tri);
+    }
+    println!();
+    let mut map_mesh = BTreeMap::new();
+    for [a, b, c] in mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().as_float3().unwrap().windows(3).map(<[_; 3]>::try_from).map(Result::unwrap) {
+        let mut tri = BTreeSet::new();
+        tri.insert(OrdWrapper(a.into()));
+        tri.insert(OrdWrapper(b.into()));
+        tri.insert(OrdWrapper(c.into()));
+        *map_mesh.entry(tri).or_insert(0) += 1;
+    }
+    for (i, (tri, count)) in map_mesh.iter().enumerate() {
+        println!("({i}: {:?}) {:?}: {count}", aa(tri), tri);
+    }
+    println!();
+    let mut map_filter = BTreeMap::new();
+    for [a, b, c] in mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+        .as_float3().unwrap()
+        .windows(3)
+        .map(<[_; 3]>::try_from).map(Result::unwrap)
+        .filter(|&[a, b, c]| a != b && b != c && c != a)
+    {
+        let mut tri = BTreeSet::new();
+        tri.insert(OrdWrapper(a.into()));
+        tri.insert(OrdWrapper(b.into()));
+        tri.insert(OrdWrapper(c.into()));
+        *map_filter.entry(tri).or_insert(0) += 1;
+    }
+    for (i, (tri, count)) in map_filter.iter().enumerate() {
+        println!("({i}: {:?}) {:?}: {count}", aa(tri), tri);
+    }
+    println!();
+    println!("{:#?}", map.retain(|k, _| !map_filter.contains_key(k)));
+    assert_eq!(cube.oriented_triangles().count(), 12);
+    for (i, [a, b, c]) in cube.oriented_triangles().enumerate() {
+        assert!(
+            a.coords.dot(&b.coords.cross(&c.coords)) > 0.0,
+            "{i}: ({a}, {b}, {c}): volume: {}", a.coords.dot(&b.coords.cross(&c.coords))
+        );
     }
 }
 
