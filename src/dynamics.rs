@@ -1,7 +1,7 @@
+use std::hash::Hash;
 use bevy_ecs::component::Component;
 use nalgebra::{Matrix3, Matrix4, MatrixView3, RealField, Vector3, VectorView3};
 use bevy_asset::Handle;
-use bevy_render::mesh::Mesh;
 
 #[cfg(test)]
 mod tests;
@@ -11,7 +11,8 @@ mod moments;
 pub use implicit_euler::State;
 
 pub(crate) use moments::Moments;
-use std::marker::PhantomData;
+use bevy_reflect::TypePath;
+use crate::geometry::mesh::ColliderMesh;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct AffineTransform<Scalar: RealField> {
@@ -42,9 +43,8 @@ impl<Scalar: RealField> AffineTransform<Scalar> {
 pub struct ColliderGeometryTransform<Scalar: RealField>(pub AffineTransform<Scalar>);
 
 #[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ColliderGeometry<Scalar: RealField> {
-    pub(crate) geometry: Handle<Mesh>,
-    _phantom: PhantomData<Scalar>,
+pub struct ColliderGeometry<Scalar: RealField + PartialOrd + TypePath, Index: Copy + Hash + TryInto<usize> + TypePath + Send + Sync> {
+    pub(crate) geometry: Handle<ColliderMesh<Scalar, Index>>,
 }
 
 #[derive(Component, Clone, Debug, Hash, PartialEq, Eq)]

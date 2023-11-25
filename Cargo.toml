@@ -12,7 +12,6 @@ argmin-math = { version = "0.3", features = ["nalgebra_v0_32"] }
 bevy_ecs = "0.12"
 bevy_asset = "0.12"
 bevy_reflect = "0.12"
-bevy_render = "0.12"
 bevy_app = "0.12"
 petgraph = "0.6"
 thiserror = "1"
