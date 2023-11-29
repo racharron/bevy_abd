@@ -9,6 +9,8 @@ mod geometry;
 mod broad_phase;
 mod dynamics;
 
+mod spatial_hash;
+
 
 pub use dynamics::*;
 

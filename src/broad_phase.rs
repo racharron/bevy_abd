@@ -15,8 +15,8 @@ pub fn quadratic<Scalar: RealField + TypePath>(
     colliders: Query<(Entity, &AffineBody<Scalar>, &ColliderInternal<Scalar>)>
 ) {
     for (o0, b0, c0) in &colliders {
-        for (o1, b1, c1) in colliders.iter().filter(|(o1, _, _)| &o0 != o1) {
-            todo!()
+        for (_, b1, c1) in colliders.iter().filter(|(o1, _, _)| &o0 != o1) {
+            
         }
     }
 }

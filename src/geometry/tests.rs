@@ -8,18 +8,15 @@ const OFFSETS: [f32; 7] = [0.0, 0.5, 1.0, 2.0, -0.5, -1.0, -2.0];
 
 const ANGLES: [f32; 6] = [0.0, 0.1, 0.5, 0.9, 1.4, 1.5];
 
-/*
+
 #[test]
 fn tmp() {
-    let [a0, a1, b0, b1] = [[0.0, 0.0, 0.0], [0.0, 0.5, -1.0], [0.0, 0.0, 0.5], [0.0, -0.5, 1.5]].map(Point3::from);
-    assert_eq!(
-        0.25,
-        seg_seg_squared_distance(a0, a1, b0, b1),
-        "{:?}->{:?}, {:?}->{:?}",
-        a0, a1, b0, b1
-    )
+    for n in -16..0 {
+        println!("{n}: {}, {}", n >> 1, n / 2);
+    }
+    assert!(false)
 }
-*/
+
 
 #[test]
 fn simple_cuboid_moments() {

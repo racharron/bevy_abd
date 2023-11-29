@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use bevy_ecs::component::Component;
-use nalgebra::{Matrix3, Matrix4, MatrixView3, RealField, Vector3, VectorView3};
+use nalgebra::{Matrix3, Matrix4, MatrixView3, Point3, RealField, Vector3, VectorView3};
 use bevy_asset::Handle;
 
 #[cfg(test)]
@@ -36,6 +36,9 @@ impl<Scalar: RealField> AffineTransform<Scalar> {
     }
     pub fn translation(&self) -> VectorView3<Scalar> {
         self.translation.as_view()
+    }
+    pub fn apply(&self, p: Point3<Scalar>) -> Point3<Scalar> {
+        self.linear_transform() * p + self.translation()
     }
 }
 
