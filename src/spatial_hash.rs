@@ -20,7 +20,7 @@ pub struct SpatialHash<'a, Scalar: RealField> {
 }
 
 /// Represents that an object on some trajectory will stay within these bounds for some specified time interval.
-pub trait Bounded<Scalar: RealField> {
+pub trait Bounded<Scalar: RealField + TryInto<i16>> {
     fn bounds(&self, q: AffineTransform<Scalar>, dq: AffineTransform<Scalar>) -> (Point3<Scalar>, Point3<Scalar>);
     fn add_to_spatial_hash<'a>(&'a self, sh: &mut SpatialHash<'a, Scalar>, bin: SpatialBin);
     fn add_bins<'a>(&'a self, sh: &mut SpatialHash<'a, Scalar>, q: AffineTransform<Scalar>, dq: AffineTransform<Scalar>) {
@@ -29,7 +29,7 @@ pub trait Bounded<Scalar: RealField> {
         let dy = max.y.clone() - min.y.clone();
         let dz = max.z.clone() - min.z.clone();
         let scale = dx.max(dy.max(dz));
-        let level = scale.log2().ceil().try_into().unwrap();
+        let level = scale.log2().ceil().try_into().ok().unwrap();
         let min_x = min.x.clone();
         let max_x = max.x.clone();
         let min_y = min.y.clone();
@@ -89,7 +89,7 @@ pub trait Bounded<Scalar: RealField> {
             })
         }
         if yl != yu && zl != zu {
-            Some(SpatialBin {
+            self.add_to_spatial_hash(sh, SpatialBin {
                 level,
                 x: xl,
                 y: yu,
@@ -121,11 +121,12 @@ impl SpatialBin {
 fn dimbin<Scalar: RealField + TryInto<i16>>(x: Scalar, level: i16) -> i16 {
     let factor = Scalar::from_u8(2).unwrap().powi(-(level as i32));
     let scaled = x * factor;
-    let binned = scaled % Scalar::from_i16(i16::MIN_VALUE).unwrap();
-    if binned.is_zero() && scaled.is_negative() {
-        i16::MIN_VALUE
+    let is_negative = scaled.is_negative();
+    let binned = scaled % Scalar::from_i16(i16::MIN).unwrap();
+    if binned.is_zero() && is_negative {
+        i16::MIN
     } else {
-        binned.try_into().unwrap()
+        binned.try_into().ok().unwrap()
     }
 }
 
@@ -178,7 +179,7 @@ impl<'a, Scalar: RealField + TryInto<i16>> Bounded<Scalar> for &'a [Point3<Scala
 }
 
 fn point_bounds<'a, Scalar: RealField + TryInto<i16>>(point: &Point3<Scalar>, q: &AffineTransform<Scalar>, dq: &AffineTransform<Scalar>) -> [[Scalar; 2]; 3] {
-    let endpoint = dq.linear_transform() * (q.linear_transform() * point) + q.linear_transform() + dq.linear_transform();
+    let endpoint = dq.linear_transform() * (q.linear_transform() * point) + q.translation() + dq.translation();
     let min_x = point.x.clone().min(endpoint.x.clone());
     let max_x = point.x.clone().max(endpoint.x.clone());
     let min_y = point.y.clone().min(endpoint.y.clone());
